@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karakhana Manager</title>
+<style>
+:root {
+  --primary: #1565c0;
+  --primary-dark: #0d47a1;
+  --accent: #ff8f00;
+  --bg: #f5f6fa;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --border: #e0e0e0;
+  --danger: #c62828;
+  --success: #2e7d32;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --card: #1e1e1e;
+    --text: #f0f0f0;
+    --text-muted: #aaa;
+    --border: #333;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Segoe UI', Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+.auth-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px 20px; }
+.auth-header { text-align: center; margin-bottom: 28px; }
+.auth-header .icon { font-size: 48px; }
+.auth-header h1 { margin: 6px 0 2px; font-size: 22px; }
+.auth-header p { margin: 0; color: var(--text-muted); font-size: 14px; }
+.card { background: var(--card); border-radius: 16px; padding: 24px 20px; width: 100%; max-width: 380px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; color: var(--text-muted); }
+label:first-child { margin-top: 0; }
+input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px; }
+input:focus { outline: 2px solid var(--primary); }
+button.btn { width: 100%; padding: 13px; margin-top: 20px; border: none; border-radius: 10px; background: var(--primary); color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
+button.btn:active { background: var(--primary-dark); }
+button.btn.secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+button.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.switch-link { text-align: center; margin-top: 18px; font-size: 14px; color: var(--text-muted); }
+.switch-link a { color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; }
+.error-msg { background: #fdecea; color: var(--danger); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 14px; display: none; }
+.error-msg.show { display: block; }
+.top-bar { background: var(--primary); color: white; padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; }
+.top-bar .biz-name { font-size: 17px; font-weight: 700; }
+.top-bar .owner-name { font-size: 12px; opacity: 0.85; }
+.top-bar button { background: rgba(255,255,255,0.15); border: none; color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.home-body { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.stat-row { display: flex; gap: 12px; }
+.stat-card { flex: 1; background: var(--card); border-radius: 14px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.stat-card .num { font-size: 22px; font-weight: 700; color: var(--primary); }
+.stat-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.placeholder-note { background: var(--card); border-radius: 14px; padding: 18px; text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 10px; }
+#recaptcha-container, #recaptcha-container-login { margin-top: 14px; }
+</style>
+</head>
+<body>
+
+  <!-- ===================== SIGN UP SCREEN ===================== -->
+  <div id="signup-screen" class="screen active">
+    <div class="auth-wrap">
+      <div class="auth-header">
+        <div class="icon">🏭</div>
+        <h1>Karakhana Manager</h1>
+        <p>Karigar &amp; Vyapari Ledger</p>
+      </div>
+      <div class="card">
+        <label>Business / Factory Name</label>
+        <input id="su-business" type="text" placeholder="e.g. Shree Garments">
+        <label>Owner Name</label>
+        <input id="su-owner" type="text" placeholder="e.g. Ramesh Kumar">
+        <label>Mobile Number</label>
+        <input id="su-phone" type="tel" placeholder="+91XXXXXXXXXX">
+        <div id="recaptcha-container"></div>
+        <button class="btn" id="su-send-otp">Send OTP</button>
+        <div class="error-msg" id="su-error"></div>
+      </div>
+      <div class="switch-link">Already have an account? <a onclick="showScreen('login-screen')">Sign In</a></div>
+    </div>
+  </div>
+
+  <!-- ===================== OTP VERIFY SCREEN ===================== -->
+  <div id="otp-screen" class="screen">
+    <div class="auth-wrap">
+      <div class="auth-header">
+        <div class="icon">🔐</div>
+        <h1>Verify OTP</h1>
+        <p id="otp-sub">Code sent to your mobile number</p>
+      </div>
+      <div class="card">
+        <label>Enter 6-digit OTP</label>
+        <input id="otp-code" type="tel" maxlength="6" placeholder="_ _ _ _ _ _">
+        <button class="btn" id="otp-verify-btn">Verify &amp; Continue</button>
+        <button class="btn secondary" id="otp-back-btn" style="margin-top:10px;">Back</button>
+        <div class="error-msg" id="otp-error"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SIGN IN SCREEN ===================== -->
+  <div id="login-screen" class="screen">
+    <div class="auth-wrap">
+      <div class="auth-header">
+        <div class="icon">🏭</div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to your karakhana</p>
+      </div>
+      <div class="card">
+        <label>Mobile Number</label>
+        <input id="li-phone" type="tel" placeholder="+91XXXXXXXXXX">
+        <div id="recaptcha-container-login"></div>
+        <button class="btn" id="li-send-otp">Send OTP</button>
+        <div class="error-msg" id="li-error"></div>
+      </div>
+      <div class="switch-link">New here? <a onclick="showScreen('signup-screen')">Create Business Account</a></div>
+    </div>
+  </div>
+
+  <!-- ===================== HOME / DASHBOARD SCREEN ===================== -->
+  <div id="home-screen" class="screen">
+    <div class="top-bar">
+      <div>
+        <div class="biz-name" id="home-biz-name">Business Name</div>
+        <div class="owner-name" id="home-owner-name">Owner Name</div>
+      </div>
+      <button id="logout-btn">Logout</button>
+    </div>
+    <div class="home-body">
+      <div class="stat-row">
+        <div class="stat-card"><div class="num">0</div><div class="label">Karigars</div></div>
+        <div class="stat-card"><div class="num">0</div><div class="label">Vyaparis</div></div>
+        <div class="stat-card"><div class="num">₹0</div><div class="label">Payable</div></div>
+      </div>
+      <div class="placeholder-note">
+        Karigar &amp; Vyapari modules will be added in the next steps.<br>
+        Your business account is working correctly ✅
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+
+  <script>
+  // ============================================================
+  // YOUR FIREBASE PROJECT CONFIG (already filled in for you)
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyA6OL_f_AdHmuAMTrp1DxoURjk0luQZWEk",
+    authDomain: "karkhana-maneger.firebaseapp.com",
+    projectId: "karkhana-maneger",
+    storageBucket: "karkhana-maneger.firebasestorage.app",
+    messagingSenderId: "493590521831",
+    appId: "1:493590521831:web:065fc4e76c56b4d9f3bf42",
+    measurementId: "G-PEYK694620"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+  function showError(elId, message) {
+    const el = document.getElementById(elId);
+    el.textContent = message;
+    el.classList.add('show');
+  }
+  function hideError(elId) {
+    document.getElementById(elId).classList.remove('show');
+  }
+
+  let pendingConfirmation = null;
+  let pendingSignup = null;
+
+  function buildRecaptcha(containerId) {
+    return new firebase.auth.RecaptchaVerifier(containerId, { size: 'invisible' }, auth);
+  }
+
+  document.getElementById('su-send-otp').addEventListener('click', async () => {
+    hideError('su-error');
+    const business = document.getElementById('su-business').value.trim();
+    const owner = document.getElementById('su-owner').value.trim();
+    const phone = document.getElementById('su-phone').value.trim();
+
+    if (!business || !owner || !phone) {
+      showError('su-error', 'Please fill Business Name, Owner Name and Mobile Number.');
+      return;
+    }
+    if (!phone.startsWith('+')) {
+      showError('su-error', 'Enter mobile with country code, e.g. +91XXXXXXXXXX');
+      return;
+    }
+
+    const btn = document.getElementById('su-send-otp');
+    btn.disabled = true;
+    btn.textContent = 'Sending OTP...';
+
+    try {
+      const verifier = buildRecaptcha('recaptcha-container');
+      pendingConfirmation = await auth.signInWithPhoneNumber(phone, verifier);
+      pendingSignup = { business, owner, phone };
+      document.getElementById('otp-sub').textContent = 'Code sent to ' + phone;
+      showScreen('otp-screen');
+    } catch (err) {
+      showError('su-error', err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send OTP';
+    }
+  });
+
+  document.getElementById('li-send-otp').addEventListener('click', async () => {
+    hideError('li-error');
+    const phone = document.getElementById('li-phone').value.trim();
+
+    if (!phone.startsWith('+')) {
+      showError('li-error', 'Enter mobile with country code, e.g. +91XXXXXXXXXX');
+      return;
+    }
+
+    const btn = document.getElementById('li-send-otp');
+    btn.disabled = true;
+    btn.textContent = 'Sending OTP...';
+
+    try {
+      const verifier = buildRecaptcha('recaptcha-container-login');
+      pendingConfirmation = await auth.signInWithPhoneNumber(phone, verifier);
+      pendingSignup = null;
+      document.getElementById('otp-sub').textContent = 'Code sent to ' + phone;
+      showScreen('otp-screen');
+    } catch (err) {
+      showError('li-error', err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send OTP';
+    }
+  });
+
+  document.getElementById('otp-verify-btn').addEventListener('click', async () => {
+    hideError('otp-error');
+    const code = document.getElementById('otp-code').value.trim();
+    if (!code || code.length < 6) {
+      showError('otp-error', 'Enter the 6-digit code.');
+      return;
+    }
+    if (!pendingConfirmation) {
+      showError('otp-error', 'Session expired. Please go back and try again.');
+      return;
+    }
+
+    const btn = document.getElementById('otp-verify-btn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+
+    try {
+      const result = await pendingConfirmation.confirm(code);
+      const uid = result.user.uid;
+
+      if (pendingSignup) {
+        await db.collection('businesses').doc(uid).set({
+          businessName: pendingSignup.business,
+          ownerName: pendingSignup.owner,
+          phone: pendingSignup.phone,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    } catch (err) {
+      showError('otp-error', 'Wrong code. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Verify & Continue';
+    }
+  });
+
+  document.getElementById('otp-back-btn').addEventListener('click', () => {
+    showScreen(pendingSignup ? 'signup-screen' : 'login-screen');
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    auth.signOut();
+  });
+
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const doc = await db.collection('businesses').doc(user.uid).get();
+      if (doc.exists) {
+        const data = doc.data();
+        document.getElementById('home-biz-name').textContent = data.businessName;
+        document.getElementById('home-owner-name').textContent = data.ownerName + ' • ' + data.phone;
+        showScreen('home-screen');
+      } else {
+        auth.signOut();
+      }
+    } else {
+      showScreen('signup-screen');
+    }
+  });
+  </script>
+</body>
+</html>
